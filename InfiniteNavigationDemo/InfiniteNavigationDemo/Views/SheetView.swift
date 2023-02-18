@@ -21,6 +21,7 @@ struct SheetView: View {
             
             Spacer()
             Text("Sheet")
+            AppSessionView()
             Spacer()
             
             NavFooterView(

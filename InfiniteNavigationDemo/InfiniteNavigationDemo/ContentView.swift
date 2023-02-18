@@ -8,6 +8,7 @@ struct ContentView: View {
     var body: some View {
         InfiniteNavigation.create(
             navAction: coordinator.navigation.publisher,
+            environment: coordinator.environment,
             viewBuilder: coordinator.build(for:)
         ) {
             coordinator.home

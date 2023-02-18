@@ -13,6 +13,7 @@ struct HomeView: View {
         VStack {
             Spacer()
             Text("Home")
+            AppSessionView()
             Spacer()
             
             NavFooterView(

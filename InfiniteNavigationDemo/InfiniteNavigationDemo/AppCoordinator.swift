@@ -5,6 +5,7 @@ import InfiniteNavigation
 final class AppCoordinator: ObservableObject {
     
     let navigation = MyNavigation()
+    let environment = MyEnvironment()
     
     var home: some View {
         HomeView(navigation: navigation)

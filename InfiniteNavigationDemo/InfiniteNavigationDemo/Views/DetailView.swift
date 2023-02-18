@@ -22,6 +22,7 @@ struct DetailView: View {
             
             Spacer()
             Text("Detail")
+            AppSessionView()
             Spacer()
             
             NavFooterView(
