@@ -21,6 +21,7 @@ struct SheetView: View {
             
             Spacer()
             Text("Sheet")
+                .font(.title)
             AppSessionView()
             Spacer()
             
@@ -38,6 +39,7 @@ struct SheetView: View {
 struct SheetView_Previews: PreviewProvider {
     static var previews: some View {
         SheetView(navigation: MyNavigation())
+            .environmentObject(MyEnvironment())
     }
 }
 #endif

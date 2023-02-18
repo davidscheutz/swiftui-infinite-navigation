@@ -22,6 +22,7 @@ struct DetailView: View {
             
             Spacer()
             Text("Detail")
+                .font(.title)
             AppSessionView()
             Spacer()
             
@@ -40,6 +41,7 @@ struct DetailView: View {
 struct DetailView_Previews: PreviewProvider {
     static var previews: some View {
         DetailView(navigation: MyNavigation())
+            .environmentObject(MyEnvironment())
     }
 }
 #endif

@@ -13,6 +13,8 @@ struct HomeView: View {
         VStack {
             Spacer()
             Text("Home")
+                .font(.title)
+            
             AppSessionView()
             Spacer()
             
@@ -29,6 +31,7 @@ struct HomeView: View {
 struct HomeView_Previews: PreviewProvider {
     static var previews: some View {
         HomeView(navigation: MyNavigation())
+            .environmentObject(MyEnvironment())
     }
 }
 #endif
