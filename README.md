@@ -4,15 +4,15 @@
 
 # SwiftUI InfiniteNavigation
 
-InfiniteNavigation is a Swift package for SwiftUI that provides a programmatic navigation framework for unlimited nested navigations using the native push and present transitions.
+InfiniteNavigation is a Swift Package for SwiftUI that provides a programmatic navigation framework for unlimited nested navigations using the native push and present transitions.
 
 ![demo-gif](https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExZTQ5ZWNkMDRmMDg0NDkzZDVhZjFkNDhmNjE2ZmU2OTYxODlhYzJjOSZjdD1n/vsAs2ngVs4sdQ01PQ4/giphy.gif)
 
-## Why was InfiniteNavation created?
+## Why was InfiniteNavigation created?
 
-The standard navigation framework including `NavigationLink` and `.sheet()` provided by SwiftUI is limited in its nesting capabilities, which can make it difficult to create more complex navigation structures in your app. Additionally, existing third-party solutions often come with their own limitations, such as no support for the native iOS swipe back gesture when pushing a view.
+The standard navigation framework including `NavigationLink` and `.sheet()` provided by SwiftUI is limited in its nesting capabilities, which can make it difficult to create complex navigation structures in your app. Additionally, existing third-party solutions often come with their own limitations, such as no support for the native iOS swipe back gesture when pushing a view.
 
-InfiniteNavigation was created to provide a solution that is easy to use and understand, and that leverages the native iOS push and present transitions. With InfiniteNavigation, you can create unlimited nested navigations and navigate programmatically without having to worry about any limitations or the complexity of other solutions.
+InfiniteNavigation was created to provide a solution that is easy to use and understand, and that leverages the native iOS push and present transitions. With InfiniteNavigation, you can create unlimited nested navigations and navigate programmatically without worrying about limitations or the complexity of other solutions.
 
 ## Features
 
@@ -23,7 +23,7 @@ InfiniteNavigation was created to provide a solution that is easy to use and und
 
 ## Requirements
 
-- iOS 14.0+
+- iOS 14.0 or later
 - Swift 5.3+
 
 ## Installation
@@ -36,9 +36,9 @@ dependencies: [
 ]
 ```
 
-## Usage
+## Components
 
-Using InfiniteNavigation is easy and works greate with the Coordinator and other navigation patterns.
+InfiniteNavigation is built of three main components:
 
 **NavDestination**
 
@@ -67,7 +67,50 @@ enum NavAction<T> {
 
 **InfiniteNavContainer**
 
-Put it all together.
+The heart of the framework. It leverages `UINavigationController` and standard `UIKIt` presentation APIs to deliver a native, solid user experience and performance.
+
+## Usage
+
+InfiniteNavigation is easy to use and works great with the Coordinator and other navigation patterns.
+
+Let's put it all together.
+
+1. Create an `enum` that represents all your view destinations, e.g.:
+
+```swift
+enum MyDestination {
+    case view1
+    case view2
+    ...
+}
+```
+
+2. Implement the `NavDestinationBuilder`, which is just a function required by the `InfiniteNavContainer` to build a `SwiftUI.View` for each case of your destination enum.
+
+```swift
+func build(for destination: MyDestination) -> AnyView {
+    switch destination {
+    case .view1:
+        return View1().toAnyView()
+    case .view2:
+        return View2().toAnyView()
+    ...
+    }
+}
+```
+
+PS: InfiniteNavigation comes with a handy `.toAnyView()` view extension.
+
+3. Create a `Combine.Publisher` that will be used to command the `InfiniteNavContainer`.
+
+```swift
+private(set) lazy var navPublisher = navigateTo.eraseToAnyPublisher()    
+private let navigateTo = PassthroughSubject<NavAction<MyDestination>, Never>()
+```
+
+It's recommended to use a dedicated object that encapsulates your app navigation.
+
+4. Setup the `InfiniteNavContainer` using the newly created destination enum, destination publisher and the view builder:
 
 ```swift
 InfiniteNavigation.create(
@@ -79,9 +122,21 @@ InfiniteNavigation.create(
 )
 ```
 
-Providing the `initialStack` will setup the initial view state without an animation.
+Optional: the `initialStack` will setup the initial view state without an animation, on top of the `homeView`.
 
-Providing an `environment` to make it available to all views on the stack.
+Optional: Providing an `environment` to make it available to all views on the stack.
+
+5. Use the `PassthroughSubject` to manipulate the navigation stack.
+
+```swift
+navigateTo.send(.show(.sheet(.view1))) // present View1 as full screen sheet
+navigateTo.send(.show(.detail(.view2))) // push View2 as detail
+navigateTo.send(.setStack([.view1, .view2])) // push an entire stack of views
+
+navigateTo.send(.dismiss)
+navigateTo.send(.pop)
+navigateTo.send(.popToCurrentRoot) // pop to root of current stack, each sheet has it's own stack
+```
 
 ## Demo
 
