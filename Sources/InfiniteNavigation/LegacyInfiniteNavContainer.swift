@@ -88,7 +88,7 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
                             case .fullScreen:
                                 navVc.modalPresentationStyle = .fullScreen
                             case .modal:
-                                navVc.modalPresentationStyle = .overCurrentContext
+                                navVc.modalPresentationStyle = .popover
                             }
                             self.navigationController?.present(navVc, animated: true)
                         }
