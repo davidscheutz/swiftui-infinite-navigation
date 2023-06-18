@@ -4,17 +4,17 @@ import Combine
 public struct InfiniteNavigation {
     
     /// Creates an instance with an enviroment object
-    public static func create<Root: SwiftUI.View, View, Environment: ObservableObject>(
+    public static func create<Root: SwiftUI.View, View>(
         initialStack: [View] = [],
         navAction: AnyPublisher<NavAction<View>, Never>,
-        environment: Environment,
+        environments: any ObservableObject...,
         viewBuilder: @escaping (View) -> AnyView,
         root: @escaping () -> Root
     ) -> some SwiftUI.View {
-        InfiniteNavContainer<Root, View, Environment>(
+        InfiniteNavContainer<Root, View>(
             initialStack: initialStack,
             navAction: navAction,
-            environment: environment,
+            environments: environments,
             viewBuilder: viewBuilder,
             root: root
         )
@@ -28,10 +28,9 @@ public struct InfiniteNavigation {
         viewBuilder: @escaping (View) -> AnyView,
         root: @escaping () -> Root
     ) -> some SwiftUI.View {
-        InfiniteNavContainer<Root, View, EmptyEnvironment>(
+        InfiniteNavContainer<Root, View>(
             initialStack: initialStack,
             navAction: navAction,
-            environment: EmptyEnvironment(),
             viewBuilder: viewBuilder,
             root: root
         )

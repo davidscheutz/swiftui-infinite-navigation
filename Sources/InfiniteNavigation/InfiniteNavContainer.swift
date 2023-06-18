@@ -2,7 +2,7 @@ import Combine
 import SwiftUI
 import UIKit
 
-public struct InfiniteNavContainer<Root: SwiftUI.View, View, Environment: ObservableObject>: UIViewControllerRepresentable {
+public struct InfiniteNavContainer<Root: SwiftUI.View, View>: UIViewControllerRepresentable {
     
     public typealias UIViewControllerType = UINavigationController
     public typealias NavDestinationPublisher = AnyPublisher<NavAction<View>, Never>
@@ -17,7 +17,7 @@ public struct InfiniteNavContainer<Root: SwiftUI.View, View, Environment: Observ
     internal init(
         initialStack: [View] = [],
         navAction: NavDestinationPublisher,
-        environment: Environment,
+        environments: [any ObservableObject] = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
@@ -25,7 +25,7 @@ public struct InfiniteNavContainer<Root: SwiftUI.View, View, Environment: Observ
         self.rootResolver = root
         self.root = root()
         self.viewBuilder = viewBuilder
-        coordinator = .init(navAction: navAction, environment: environment, viewBuilder: viewBuilder)
+        coordinator = .init(navAction: navAction, environments: environments, viewBuilder: viewBuilder)
     }
     
     public func makeUIViewController(context: Context) -> UIViewControllerType {
@@ -50,12 +50,12 @@ public struct InfiniteNavContainer<Root: SwiftUI.View, View, Environment: Observ
         
         var resolver: Resolver?
         
-        private let environment: Environment
+        private let environments: [any ObservableObject]
         private let viewBuilder: NavDestinationBuilder
         private var navSubscription: AnyCancellable?
         
-        init(navAction: NavDestinationPublisher, environment: Environment, viewBuilder: @escaping NavDestinationBuilder) {
-            self.environment = environment
+        init(navAction: NavDestinationPublisher, environments: [any ObservableObject], viewBuilder: @escaping NavDestinationBuilder) {
+            self.environments = environments
             self.viewBuilder = viewBuilder
             
             super.init()
@@ -64,7 +64,7 @@ public struct InfiniteNavContainer<Root: SwiftUI.View, View, Environment: Observ
         }
         
         func wrap<T: SwiftUI.View>(_ view: T) -> UIHostingController<AnyView> {
-            UIHostingController(rootView: view.environmentObject(environment).toAnyView())
+            UIHostingController(rootView: view.apply(environments: environments).toAnyView())
         }
         
         // MARK: Helper
@@ -133,5 +133,13 @@ extension InfiniteNavContainer {
             // TODO: Fallback on earlier versions
             return EmptyView().toAnyView()
         }
+    }
+}
+
+extension View {
+    func apply(environments: [any ObservableObject]) -> AnyView {
+        var result: any SwiftUI.View = self
+        environments.forEach { result = (result.environmentObject($0) as any SwiftUI.View) }
+        return result.toAnyView()
     }
 }
