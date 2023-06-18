@@ -24,7 +24,7 @@ public struct InfiniteNavigation {
     public static func create<Root: View, Destination: Hashable>(
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
-        environments: [any ObservableObject] = [],
+        environments: Environments = [],
         viewBuilder: @escaping (Destination) -> AnyView,
         root: @escaping () -> Root
     ) -> some View {

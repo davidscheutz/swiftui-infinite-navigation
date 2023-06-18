@@ -2,12 +2,13 @@ import SwiftUI
 import Combine
 
 @available(iOS 16.0, *)
-// TODO: add option to configure navigation bar title
 internal struct Sheet: Identifiable {
     let id = UUID().uuidString
     var path = NavigationPath()
     let source: () -> AnyView
 }
+
+public typealias Environments = [any ObservableObject]
 
 @available(iOS 16.0, *)
 public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
@@ -17,14 +18,14 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
     
     private let navAction: NavDestinationPublisher
     private let viewBuilder: NavDestinationBuilder
-    private let environments: [any ObservableObject]
+    private let environments: Environments
     
     @State private var stack: [Sheet]
     
     init(
         initialStack: [Destination] = [],
         navAction: NavDestinationPublisher,
-        environments: [any ObservableObject] = [],
+        environments: Environments = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
@@ -69,7 +70,6 @@ extension InfiniteNavContainer {
         NavigationStack(path: sheet.path) {
             wrap(sheet.wrappedValue.source())
                 .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
-//                .sheet(item: <#T##Binding<Identifiable?>#>, content: <#T##(Identifiable) -> View#>)
                 .fullScreenCover(item: Binding<Sheet?>(
                     get: { next(after: sheet.wrappedValue) },
                     set: { if $0 == nil && stack.last?.id == next(after: sheet.wrappedValue)?.id { dismiss() } }
@@ -110,6 +110,7 @@ extension InfiniteNavContainer {
     }
 }
 
+// enable swipe back gesture when navigation bar is hidden
 extension UINavigationController: UIGestureRecognizerDelegate {
     override open func viewDidLoad() {
         super.viewDidLoad()
