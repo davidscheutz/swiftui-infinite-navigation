@@ -11,7 +11,7 @@ final class MyNavigation: HomeNavigation, SheetNavigation, DetailNavigation {
     // MARK: - HomeNavigation
     
     func showSheet() {
-        navigateTo.send(.show(.sheet(.sheet)))
+        navigateTo.send(.show(.sheet(.sheet, style: .modal)))
     }
     
     func showDetail() {

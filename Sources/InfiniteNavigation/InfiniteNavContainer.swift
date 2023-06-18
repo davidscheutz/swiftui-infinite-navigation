@@ -5,7 +5,14 @@ import Combine
 internal struct Sheet: Identifiable {
     let id = UUID().uuidString
     var path = NavigationPath()
+    let style: SheetPresentationStlye
     let source: () -> AnyView
+}
+
+@available(iOS 16.0, *)
+internal struct RootContainer<T: View> {
+    var path: NavigationPath
+    let source: () -> T
 }
 
 public typealias Environments = [any ObservableObject]
@@ -20,7 +27,8 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
     private let viewBuilder: NavDestinationBuilder
     private let environments: Environments
     
-    @State private var stack: [Sheet]
+    @State private var stack = [Sheet]()
+    @State private var root: RootContainer<Root>
     
     init(
         initialStack: [Destination] = [],
@@ -29,9 +37,7 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
-        _stack = .init(initialValue: [
-            .init(path: NavigationPath(initialStack), source: { root().toAnyView() })
-        ])
+        _root = .init(initialValue: .init(path: NavigationPath(initialStack), source: root))
         
         self.navAction = navAction
         self.viewBuilder = viewBuilder
@@ -39,12 +45,12 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
     }
     
     public var body: some View {
-        root
+        render(root: $root)
             .onReceive(navAction.receiveOnMain()) {
                 switch $0 {
                 case .show(let action):
                     switch action {
-                    case .sheet(let destination): stack.append(.init { viewBuilder(destination) })
+                    case .sheet(let destination, let style): stack.append(.init(style: style) { viewBuilder(destination) })
                     case .detail(let destination): mutateCurrentPath { $0.append(destination) }
                     }
                 case .setStack(let destinations): mutateCurrentPath { $0.append(contentsOf: destinations) }
@@ -59,28 +65,52 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
 @available(iOS 16.0, *)
 extension InfiniteNavContainer {
     
-    private var root: some View {
-        guard let root = $stack.first else {
-            fatalError("Root view unexpectedly missing.")
-        }
-        return render(sheet: root)
+    private func render(root: Binding<RootContainer<Root>>) -> some View {
+        render(source: root.wrappedValue.source, path: root.path, id: nil)
     }
     
     private func render(sheet: Binding<Sheet>) -> AnyView {
-        NavigationStack(path: sheet.path) {
-            wrap(sheet.wrappedValue.source())
-                .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
-                .fullScreenCover(item: Binding<Sheet?>(
-                    get: { next(after: sheet.wrappedValue) },
-                    set: { if $0 == nil && stack.last?.id == next(after: sheet.wrappedValue)?.id { dismiss() } }
-                )) { sheet in
-                    render(sheet: .init(
-                        get: { sheet },
-                        set: { if $0.id == sheet.id { update(sheet: $0) } }
-                    ))
+        render(source: sheet.wrappedValue.source, path: sheet.path, id: sheet.wrappedValue.id)
+            .toAnyView()
+    }
+    
+    private func render(source: () -> some View, path: Binding<NavigationPath>, id: String?) -> some View {
+        let buildNextSheet: (SheetPresentationStlye) -> Binding<Sheet?> = { style in
+            Binding<Sheet?>(
+                get: {
+                    let next = nextSheet(after: id)
+                    return next?.style == style ? next : nil
+                },
+                set: {
+                    if $0 == nil && stack.last?.id == nextSheet(after: id)?.id {
+                        dismiss()
+                    }
                 }
+            )
         }
-        .toAnyView()
+        
+        let updatableSheet: (Sheet) -> Binding<Sheet> = { sheet in
+            .init(
+                get: { sheet },
+                set: { if $0.id == sheet.id { update(sheet: $0) } }
+            )
+        }
+        
+        return NavigationStack(path: path) {
+            wrap(source())
+                .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
+                .sheet(item: buildNextSheet(.modal)) { render(sheet: updatableSheet($0)) }
+                .fullScreenCover(item: buildNextSheet(.fullScreen)) { render(sheet: updatableSheet($0)) }
+                // TODO: make this work to enforce exhaustiveness
+//                .apply(nextSheetBinding.wrappedValue?.style) { style, view in
+//                    switch style {
+//                    case .fullScreen:
+//                        view.fullScreenCover(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }
+//                    case .modal:
+//                        view.sheet(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }
+//                    }
+//                }
+        }
     }
     
     private func wrap(_ view: some View) -> some View {
@@ -90,7 +120,11 @@ extension InfiniteNavContainer {
     }
     
     private func mutateCurrentPath(_ mutate: (inout NavigationPath) -> Void) {
-        mutate(&stack[stack.count - 1].path)
+        if stack.isEmpty {
+            mutate(&root.path)
+        } else {
+            mutate(&stack[stack.count - 1].path)
+        }
     }
     
     private func update(sheet: Sheet) {
@@ -100,8 +134,9 @@ extension InfiniteNavContainer {
         stack[index] = sheet
     }
     
-    private func next(after sheet: Sheet) -> Sheet? {
-        guard let index = stack.firstIndex(where: { $0.id == sheet.id }) else { return nil }
+    private func nextSheet(after id: String? = nil) -> Sheet? {
+        guard let id = id else { return stack.first }
+        guard let index = stack.firstIndex(where: { $0.id == id }) else { return nil }
         return stack[safe: index + 1]
     }
     

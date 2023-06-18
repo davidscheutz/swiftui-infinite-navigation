@@ -80,11 +80,16 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
                         case .detail(let detail):
                             let vc = self.wrap(self.viewBuilder(detail))
                             self.navigationController?.pushViewController(vc, animated: true)
-                        case .sheet(let sheet):
+                        case .sheet(let sheet, let style):
                             let vc = self.wrap(self.viewBuilder(sheet))
                             let navVc = UINavigationController(rootViewController: vc)
                             navVc.navigationBar.isHidden = true
-                            navVc.modalPresentationStyle = .fullScreen
+                            switch style {
+                            case .fullScreen:
+                                navVc.modalPresentationStyle = .fullScreen
+                            case .modal:
+                                navVc.modalPresentationStyle = .overCurrentContext
+                            }
                             self.navigationController?.present(navVc, animated: true)
                         }
                     case .setStack(let stack):
