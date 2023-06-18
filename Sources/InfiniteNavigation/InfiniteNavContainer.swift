@@ -75,19 +75,14 @@ extension InfiniteNavContainer {
     }
     
     private func render(source: () -> some View, path: Binding<NavigationPath>, id: String?) -> some View {
-        let buildNextSheet: (SheetPresentationStlye) -> Binding<Sheet?> = { style in
-            Binding<Sheet?>(
-                get: {
-                    let next = nextSheet(after: id)
-                    return next?.style == style ? next : nil
-                },
-                set: {
-                    if $0 == nil && stack.last?.id == nextSheet(after: id)?.id {
-                        dismiss()
-                    }
+        let nextSheetBinding = Binding<Sheet?>(
+            get: { nextSheet(after: id) },
+            set: {
+                if $0 == nil && stack.last?.id == nextSheet(after: id)?.id {
+                    dismiss()
                 }
-            )
-        }
+            }
+        )
         
         let updatableSheet: (Sheet) -> Binding<Sheet> = { sheet in
             .init(
@@ -97,19 +92,19 @@ extension InfiniteNavContainer {
         }
         
         return NavigationStack(path: path) {
-            wrap(source())
+            let content = wrap(source())
                 .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
-                .sheet(item: buildNextSheet(.modal)) { render(sheet: updatableSheet($0)) }
-                .fullScreenCover(item: buildNextSheet(.fullScreen)) { render(sheet: updatableSheet($0)) }
-                // TODO: make this work to enforce exhaustiveness
-//                .apply(nextSheetBinding.wrappedValue?.style) { style, view in
-//                    switch style {
-//                    case .fullScreen:
-//                        view.fullScreenCover(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }
-//                    case .modal:
-//                        view.sheet(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }
-//                    }
-//                }
+            
+            if let style = nextSheet(after: id)?.style {
+                switch style {
+                case .fullScreen:
+                    content.fullScreenCover(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }.id(id)
+                case .modal:
+                    content.sheet(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }.id(id)
+                }
+            } else {
+                content.id(id)
+            }
         }
     }
     
