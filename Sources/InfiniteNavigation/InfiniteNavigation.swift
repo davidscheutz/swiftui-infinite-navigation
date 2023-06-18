@@ -3,54 +3,44 @@ import Combine
 
 public struct InfiniteNavigation {
     
-    /// Creates an instance with an enviroment object
     @ViewBuilder
-    public static func create<Root: SwiftUI.View, View: Hashable>(
-        initialStack: [View] = [],
-        navAction: AnyPublisher<NavAction<View>, Never>,
+    public static func create<Root: View, Destination: Hashable>(
+        initialStack: [Destination] = [],
+        navAction: AnyPublisher<NavAction<Destination>, Never>,
         environments: any ObservableObject...,
-        viewBuilder: @escaping (View) -> AnyView,
+        viewBuilder: @escaping (Destination) -> AnyView,
         root: @escaping () -> Root
-    ) -> some SwiftUI.View {
-        if #available(iOS 16.0, *) {
-            InfiniteNavContainer(
-                initialStack: initialStack,
-                navAction: navAction,
-                environments: environments,
-                viewBuilder: viewBuilder,
-                root: root
-            )
-        } else {
-            LegacyInfiniteNavContainer<Root, View>(
-                initialStack: initialStack,
-                navAction: navAction,
-                environments: environments,
-                viewBuilder: viewBuilder,
-                root: root
-            )
-            .ignoresSafeArea()
-        }
+    ) -> some View {
+        create(
+            initialStack: initialStack,
+            navAction: navAction,
+            environments: environments,
+            viewBuilder: viewBuilder,
+            root: root
+        )
     }
     
-    /// Creates an instance with an empty enviroment object
     @ViewBuilder
-    public static func create<Root: SwiftUI.View, View: Hashable>(
-        initialStack: [View] = [],
-        navAction: AnyPublisher<NavAction<View>, Never>,
-        viewBuilder: @escaping (View) -> AnyView,
+    public static func create<Root: View, Destination: Hashable>(
+        initialStack: [Destination] = [],
+        navAction: AnyPublisher<NavAction<Destination>, Never>,
+        environments: [any ObservableObject] = [],
+        viewBuilder: @escaping (Destination) -> AnyView,
         root: @escaping () -> Root
-    ) -> some SwiftUI.View {
+    ) -> some View {
         if #available(iOS 16.0, *) {
             InfiniteNavContainer(
                 initialStack: initialStack,
                 navAction: navAction,
+                environments: environments,
                 viewBuilder: viewBuilder,
                 root: root
             )
         } else {
-            LegacyInfiniteNavContainer<Root, View>(
+            LegacyInfiniteNavContainer<Root, Destination>(
                 initialStack: initialStack,
                 navAction: navAction,
+                environments: environments,
                 viewBuilder: viewBuilder,
                 root: root
             )
