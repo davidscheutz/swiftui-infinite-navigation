@@ -1,6 +1,6 @@
 import Foundation
 
-enum MyDestination {
+enum MyDestination: Hashable {
     case detail
     case sheet
 }

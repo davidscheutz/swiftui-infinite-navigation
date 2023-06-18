@@ -1,145 +1,123 @@
-import Combine
 import SwiftUI
-import UIKit
+import Combine
 
-public struct InfiniteNavContainer<Root: SwiftUI.View, View>: UIViewControllerRepresentable {
+@available(iOS 16.0, *)
+internal struct Sheet: Identifiable {
+    let id = UUID().uuidString
+    var path = NavigationPath()
+    let source: () -> AnyView
+}
+
+public typealias Environments = [any ObservableObject]
+
+@available(iOS 16.0, *)
+public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
+
+    public typealias NavDestinationPublisher = AnyPublisher<NavAction<Destination>, Never>
+    public typealias NavDestinationBuilder = (Destination) -> AnyView
     
-    public typealias UIViewControllerType = UINavigationController
-    public typealias NavDestinationPublisher = AnyPublisher<NavAction<View>, Never>
-    public typealias NavDestinationBuilder = (View) -> AnyView
-    
-    private let coordinator: Coordinator
-    private let rootResolver: () -> Root
-    private let root: Root
-    private let initialStack: [View]
+    private let navAction: NavDestinationPublisher
     private let viewBuilder: NavDestinationBuilder
+    private let environments: Environments
     
-    internal init(
-        initialStack: [View] = [],
+    @State private var stack: [Sheet]
+    
+    init(
+        initialStack: [Destination] = [],
         navAction: NavDestinationPublisher,
-        environments: [any ObservableObject] = [],
+        environments: Environments = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
-        self.initialStack = initialStack
-        self.rootResolver = root
-        self.root = root()
+        _stack = .init(initialValue: [
+            .init(path: NavigationPath(initialStack), source: { root().toAnyView() })
+        ])
+        
+        self.navAction = navAction
         self.viewBuilder = viewBuilder
-        coordinator = .init(navAction: navAction, environments: environments, viewBuilder: viewBuilder)
+        self.environments = environments
     }
     
-    public func makeUIViewController(context: Context) -> UIViewControllerType {
-        let vc = UIViewControllerType()
-        context.coordinator.resolver = { vc }
-        vc.navigationBar.isHidden = true
-        vc.viewControllers = [context.coordinator.wrap(root)] + initialStack.map { context.coordinator.wrap(viewBuilder($0)) }
-        return vc
-    }
-    
-    public func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {
-        // TODO: figure out if it's still needed...
-    }
-    
-    public func makeCoordinator() -> Coordinator {
-        coordinator
-    }
-    
-    public final class Coordinator: NSObject {
-        
-        typealias Resolver = () -> UINavigationController
-        
-        var resolver: Resolver?
-        
-        private let environments: [any ObservableObject]
-        private let viewBuilder: NavDestinationBuilder
-        private var navSubscription: AnyCancellable?
-        
-        init(navAction: NavDestinationPublisher, environments: [any ObservableObject], viewBuilder: @escaping NavDestinationBuilder) {
-            self.environments = environments
-            self.viewBuilder = viewBuilder
-            
-            super.init()
-            
-            navSubscription = subscribe(to: navAction)
-        }
-        
-        func wrap<T: SwiftUI.View>(_ view: T) -> UIHostingController<AnyView> {
-            UIHostingController(rootView: view.apply(environments: environments).toAnyView())
-        }
-        
-        // MARK: Helper
-        
-        private func subscribe(to navAction: NavDestinationPublisher) -> AnyCancellable {
-            navAction
-                .receiveOnMain()
-                .sink { [weak self] navAction in
-                    guard let self = self else { return }
-                    switch navAction {
-                    case .show(let destination):
-                        switch destination {
-                        case .detail(let detail):
-                            let vc = self.wrap(self.viewBuilder(detail))
-                            self.navigationController?.pushViewController(vc, animated: true)
-                        case .sheet(let sheet):
-                            let vc = self.wrap(self.viewBuilder(sheet))
-                            let navVc = UINavigationController(rootViewController: vc)
-                            navVc.navigationBar.isHidden = true
-                            navVc.modalPresentationStyle = .fullScreen
-                            self.navigationController?.present(navVc, animated: true)
-                        }
-                    case .setStack(let stack):
-                        let vcs = stack.map { self.wrap(self.viewBuilder($0)) }
-                        self.navigationController?.setViewControllers(vcs, animated: true)
-                    case .dismiss:
-                        if let currentSheet = self.currentSheet {
-                            currentSheet.dismiss(animated: true)
-                        } else {
-                            print("⚠️ No sheet exists to dismiss.")
-                        }
-                    case .pop:
-                        // avoid the app from crashing
-                        if self.navigationController?.viewControllers.isEmpty == false {
-                            self.navigationController?.popViewController(animated: true)
-                        } else {
-                            print("⚠️ No detail exists to pop.")
-                        }
-                    case .popToCurrentRoot:
-                        self.navigationController?.popToRootViewController(animated: true)
+    public var body: some View {
+        root
+            .onReceive(navAction.receiveOnMain()) {
+                switch $0 {
+                case .show(let action):
+                    switch action {
+                    case .sheet(let destination): stack.append(.init { viewBuilder(destination) })
+                    case .detail(let destination): mutateCurrentPath { $0.append(destination) }
                     }
+                case .setStack(let destinations): mutateCurrentPath { $0.append(contentsOf: destinations) }
+                case .dismiss: dismiss()
+                case .pop: mutateCurrentPath { $0.removeLastSafely() }
+                case .popToCurrentRoot: mutateCurrentPath { $0.removeAll() }
+                }
+            }
+    }
+}
+
+@available(iOS 16.0, *)
+extension InfiniteNavContainer {
+    
+    private var root: some View {
+        guard let root = $stack.first else {
+            fatalError("Root view unexpectedly missing.")
+        }
+        return render(sheet: root)
+    }
+    
+    private func render(sheet: Binding<Sheet>) -> AnyView {
+        NavigationStack(path: sheet.path) {
+            wrap(sheet.wrappedValue.source())
+                .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
+                .fullScreenCover(item: Binding<Sheet?>(
+                    get: { next(after: sheet.wrappedValue) },
+                    set: { if $0 == nil && stack.last?.id == next(after: sheet.wrappedValue)?.id { dismiss() } }
+                )) { sheet in
+                    render(sheet: .init(
+                        get: { sheet },
+                        set: { if $0.id == sheet.id { update(sheet: $0) } }
+                    ))
                 }
         }
-        
-        private var currentSheet: UIViewController? {
-            var sheet = resolver?().presentedViewController
-            
-            while sheet?.presentedViewController != nil {
-                sheet = sheet?.presentedViewController
-            }
-            
-            return sheet
+        .toAnyView()
+    }
+    
+    private func wrap(_ view: some View) -> some View {
+        view
+            .apply(environments: environments)
+            .navigationBarHidden(true)
+    }
+    
+    private func mutateCurrentPath(_ mutate: (inout NavigationPath) -> Void) {
+        mutate(&stack[stack.count - 1].path)
+    }
+    
+    private func update(sheet: Sheet) {
+        guard let index = stack.firstIndex(where: { $0.id == sheet.id }) else {
+            return
         }
-        
-        private var navigationController: UINavigationController? {
-            currentSheet as? UINavigationController ?? resolver?()
-        }
+        stack[index] = sheet
+    }
+    
+    private func next(after sheet: Sheet) -> Sheet? {
+        guard let index = stack.firstIndex(where: { $0.id == sheet.id }) else { return nil }
+        return stack[safe: index + 1]
+    }
+    
+    private func dismiss() {
+        stack.removeLastSafely()
     }
 }
 
-extension InfiniteNavContainer {
-    func barTint(color: Color) -> some SwiftUI.View {
-        if #available(iOS 15.0, *) {
-            return tint(color).toAnyView()
-        } else {
-            // TODO: Fallback on earlier versions
-            return EmptyView().toAnyView()
-        }
+// enable swipe back gesture when navigation bar is hidden
+extension UINavigationController: UIGestureRecognizerDelegate {
+    override open func viewDidLoad() {
+        super.viewDidLoad()
+        interactivePopGestureRecognizer?.delegate = self
     }
-}
 
-extension View {
-    func apply(environments: [any ObservableObject]) -> AnyView {
-        var result: any SwiftUI.View = self
-        environments.forEach { result = (result.environmentObject($0) as any SwiftUI.View) }
-        return result.toAnyView()
+    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        viewControllers.count > 1
     }
 }

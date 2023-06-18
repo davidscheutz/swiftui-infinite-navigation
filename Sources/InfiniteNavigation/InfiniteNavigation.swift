@@ -3,37 +3,48 @@ import Combine
 
 public struct InfiniteNavigation {
     
-    /// Creates an instance with an enviroment object
-    public static func create<Root: SwiftUI.View, View>(
-        initialStack: [View] = [],
-        navAction: AnyPublisher<NavAction<View>, Never>,
+    @ViewBuilder
+    public static func create<Root: View, Destination: Hashable>(
+        initialStack: [Destination] = [],
+        navAction: AnyPublisher<NavAction<Destination>, Never>,
         environments: any ObservableObject...,
-        viewBuilder: @escaping (View) -> AnyView,
+        viewBuilder: @escaping (Destination) -> AnyView,
         root: @escaping () -> Root
-    ) -> some SwiftUI.View {
-        InfiniteNavContainer<Root, View>(
+    ) -> some View {
+        create(
             initialStack: initialStack,
             navAction: navAction,
             environments: environments,
             viewBuilder: viewBuilder,
             root: root
         )
-        .ignoresSafeArea()
     }
     
-    /// Creates an instance with an empty enviroment object
-    public static func create<Root: SwiftUI.View, View>(
-        initialStack: [View] = [],
-        navAction: AnyPublisher<NavAction<View>, Never>,
-        viewBuilder: @escaping (View) -> AnyView,
+    @ViewBuilder
+    public static func create<Root: View, Destination: Hashable>(
+        initialStack: [Destination] = [],
+        navAction: AnyPublisher<NavAction<Destination>, Never>,
+        environments: Environments = [],
+        viewBuilder: @escaping (Destination) -> AnyView,
         root: @escaping () -> Root
-    ) -> some SwiftUI.View {
-        InfiniteNavContainer<Root, View>(
-            initialStack: initialStack,
-            navAction: navAction,
-            viewBuilder: viewBuilder,
-            root: root
-        )
-        .ignoresSafeArea()
+    ) -> some View {
+        if #available(iOS 16.0, *) {
+            InfiniteNavContainer(
+                initialStack: initialStack,
+                navAction: navAction,
+                environments: environments,
+                viewBuilder: viewBuilder,
+                root: root
+            )
+        } else {
+            LegacyInfiniteNavContainer<Root, Destination>(
+                initialStack: initialStack,
+                navAction: navAction,
+                environments: environments,
+                viewBuilder: viewBuilder,
+                root: root
+            )
+            .ignoresSafeArea()
+        }
     }
 }
