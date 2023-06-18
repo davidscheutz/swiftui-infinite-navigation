@@ -1,20 +1,27 @@
 import SwiftUI
+import InfiniteNavigation
 
 struct NavFooterView: View {
     
     typealias Completion = () -> Void
     
-    let showSheet: Completion
+    let showSheet: (SheetPresentationStlye) -> Void
     let showDetail: Completion
     var popDetails: Completion?
     
     var body: some View {
-        HStack {
-            Button("Show Detail", action: showDetail)
-            if let popDetails = popDetails {
-                Button("Pop Details", action: popDetails)
+        VStack {
+            HStack {
+                Button("Show Detail", action: showDetail)
+                if let popDetails = popDetails {
+                    Button("Pop Details", action: popDetails)
+                }
             }
-            Button("Show Sheet", action: showSheet)
+            
+            HStack {
+                Button("Show Full Sheet") { showSheet(.fullScreen) }
+                Button("Show Modal Sheet") { showSheet(.modal) }
+            }
         }
         .buttonStyle(.bordered)
     }
@@ -23,8 +30,8 @@ struct NavFooterView: View {
 #if DEBUG
 struct NavFooterView_Previews: PreviewProvider {
     static var previews: some View {
-        NavFooterView(showSheet: {}, showDetail: {})
-        NavFooterView(showSheet: {}, showDetail: {}, popDetails: {})
+        NavFooterView(showSheet: { _ in }, showDetail: {})
+        NavFooterView(showSheet: { _ in }, showDetail: {}, popDetails: {})
     }
 }
 #endif
