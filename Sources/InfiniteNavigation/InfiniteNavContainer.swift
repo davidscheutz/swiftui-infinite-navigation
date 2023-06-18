@@ -38,30 +38,32 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
     }
     
     public var body: some View {
-        ZStack {
-            if let root = $stack.first {
-                render(sheet: root)
-            }
-        }
-        .onReceive(navAction.receiveOnMain()) {
-            // TODO: figure out 'stack[stack.count - 1].path'
-            switch $0 {
-            case .show(let action):
-                switch action {
-                case .sheet(let destination): stack.append(.init(source: { viewBuilder(destination) }))
-                case .detail(let destination): stack[stack.count - 1].path.append(destination)
+        root
+            .onReceive(navAction.receiveOnMain()) {
+                switch $0 {
+                case .show(let action):
+                    switch action {
+                    case .sheet(let destination): stack.append(.init { viewBuilder(destination) })
+                    case .detail(let destination): mutateCurrentPath { $0.append(destination) }
+                    }
+                case .setStack(let destinations): mutateCurrentPath { $0.append(contentsOf: destinations) }
+                case .dismiss: dismiss()
+                case .pop: mutateCurrentPath { $0.removeLastSafely() }
+                case .popToCurrentRoot: mutateCurrentPath { $0.removeAll() }
                 }
-            case .setStack(let destinations): destinations.forEach { stack[stack.count - 1].path.append($0) }
-            case .dismiss: dismiss()
-            case .pop: stack[stack.count - 1].path.removeLast() // TODO: safely
-            case .popToCurrentRoot: stack[stack.count - 1].path.removeLast(stack[stack.count - 1].path.count) // TODO: convenient removeAll()
             }
-        }
     }
 }
 
 @available(iOS 16.0, *)
 extension InfiniteNavContainer {
+    
+    private var root: some View {
+        guard let root = $stack.first else {
+            fatalError("Root view unexpectedly missing.")
+        }
+        return render(sheet: root)
+    }
     
     private func render(sheet: Binding<Sheet>) -> AnyView {
         NavigationStack(path: sheet.path) {
@@ -74,13 +76,7 @@ extension InfiniteNavContainer {
                 )) { sheet in
                     render(sheet: .init(
                         get: { sheet },
-                        set: { newValue in
-                            guard newValue.id == sheet.id,
-                                  let index = stack.firstIndex(where: { $0.id == sheet.id }) else {
-                                return
-                            }
-                            stack[index] = newValue
-                        }
+                        set: { if $0.id == sheet.id { update(sheet: $0) } }
                     ))
                 }
         }
@@ -93,13 +89,24 @@ extension InfiniteNavContainer {
             .navigationBarHidden(true)
     }
     
+    private func mutateCurrentPath(_ mutate: (inout NavigationPath) -> Void) {
+        mutate(&stack[stack.count - 1].path)
+    }
+    
+    private func update(sheet: Sheet) {
+        guard let index = stack.firstIndex(where: { $0.id == sheet.id }) else {
+            return
+        }
+        stack[index] = sheet
+    }
+    
     private func next(after sheet: Sheet) -> Sheet? {
         guard let index = stack.firstIndex(where: { $0.id == sheet.id }) else { return nil }
         return stack[safe: index + 1]
     }
     
     private func dismiss() {
-        stack.removeLast() // TODO: safely
+        stack.removeLastSafely()
     }
 }
 
@@ -111,21 +118,5 @@ extension UINavigationController: UIGestureRecognizerDelegate {
 
     public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         viewControllers.count > 1
-    }
-}
-
-// MARK: - Helper
-
-extension View {
-    func apply(environments: [any ObservableObject]) -> AnyView {
-        var result: any SwiftUI.View = self
-        environments.forEach { result = (result.environmentObject($0) as any SwiftUI.View) }
-        return result.toAnyView()
-    }
-}
-
-extension Collection {
-    subscript (safe index: Index) -> Element? {
-        indices.contains(index) ? self[index] : nil
     }
 }
