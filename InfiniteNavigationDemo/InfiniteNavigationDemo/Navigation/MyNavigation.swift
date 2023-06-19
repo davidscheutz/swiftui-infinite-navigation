@@ -10,8 +10,8 @@ final class MyNavigation: HomeNavigation, SheetNavigation, DetailNavigation {
 
     // MARK: - HomeNavigation
     
-    func showSheet() {
-        navigateTo.send(.show(.sheet(.sheet)))
+    func showSheet(style: SheetPresentationStlye) {
+        navigateTo.send(.show(.sheet(.sheet, style: style)))
     }
     
     func showDetail() {

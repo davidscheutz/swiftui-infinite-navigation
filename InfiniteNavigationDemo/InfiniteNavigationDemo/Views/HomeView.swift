@@ -1,7 +1,8 @@
 import SwiftUI
+import InfiniteNavigation
 
 protocol HomeNavigation {
-    func showSheet()
+    func showSheet(style: SheetPresentationStlye)
     func showDetail()
 }
 
