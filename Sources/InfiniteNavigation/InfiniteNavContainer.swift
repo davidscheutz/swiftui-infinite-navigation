@@ -95,7 +95,7 @@ extension InfiniteNavContainer {
             let content = wrap(source())
                 .navigationDestination(for: Destination.self) { wrap(viewBuilder($0)) }
             
-            if let style = nextSheet(after: id)?.style {
+            if let style = nextSheetBinding.wrappedValue?.style {
                 switch style {
                 case .fullScreen:
                     content.fullScreenCover(item: nextSheetBinding) { render(sheet: updatableSheet($0)) }.id(id)
