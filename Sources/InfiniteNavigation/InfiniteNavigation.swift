@@ -8,7 +8,7 @@ public struct InfiniteNavigation {
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
         environments: any ObservableObject...,
-        viewBuilder: @escaping (Destination) -> AnyView,
+        viewBuilder: @escaping (Destination) -> some View,
         @ViewBuilder root: @escaping () -> Root
     ) -> some View {
         create(
@@ -25,7 +25,7 @@ public struct InfiniteNavigation {
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
         environments: Environments = [],
-        viewBuilder: @escaping (Destination) -> AnyView,
+        viewBuilder: @escaping (Destination) -> some View,
         @ViewBuilder root: @escaping () -> Root
     ) -> some View {
         if #available(iOS 16.0, *) {

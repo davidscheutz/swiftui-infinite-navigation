@@ -6,7 +6,7 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
     
     public typealias UIViewControllerType = UINavigationController
     public typealias NavDestinationPublisher = AnyPublisher<NavAction<View>, Never>
-    public typealias NavDestinationBuilder = (View) -> AnyView
+    public typealias NavDestinationBuilder = (View) -> any SwiftUI.View
     
     private let coordinator: Coordinator
     private let rootResolver: () -> Root
