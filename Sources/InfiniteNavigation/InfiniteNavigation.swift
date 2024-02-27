@@ -7,7 +7,7 @@ public struct InfiniteNavigation {
     public static func create<Root: View, Destination: Hashable>(
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
-        environments: any ObservableObject...,
+        environments: Environment...,
         viewBuilder: @escaping (Destination) -> some View,
         @ViewBuilder root: @escaping () -> Root
     ) -> some View {
@@ -24,7 +24,7 @@ public struct InfiniteNavigation {
     public static func create<Root: View, Destination: Hashable>(
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
-        environments: Environments = [],
+        environments: [Environment] = [],
         viewBuilder: @escaping (Destination) -> some View,
         @ViewBuilder root: @escaping () -> Root
     ) -> some View {

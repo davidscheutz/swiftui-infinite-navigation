@@ -8,7 +8,7 @@ internal struct Sheet: Identifiable {
     let source: () -> any View
 }
 
-public typealias Environments = [any ObservableObject]
+public typealias Environment = any ObservableObject
 
 @available(iOS 16.0, *)
 public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
@@ -18,14 +18,14 @@ public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
     
     private let navAction: NavDestinationPublisher
     private let viewBuilder: NavDestinationBuilder
-    private let environments: Environments
+    private let environments: [Environment]
     
     @State private var stack: [Sheet]
     
     init(
         initialStack: [Destination] = [],
         navAction: NavDestinationPublisher,
-        environments: Environments = [],
+        environments: [Environment] = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
