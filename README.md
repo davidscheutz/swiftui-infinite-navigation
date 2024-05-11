@@ -92,18 +92,17 @@ enum MyDestination: Hashable {
 2. Implement the `NavDestinationBuilder`, which is just a function required by the `InfiniteNavContainer` to build a `SwiftUI.View` for each case of your destination enum.
 
 ```swift
-func build(for destination: MyDestination) -> AnyView {
+@ViewBuilder
+func build(for destination: MyDestination) -> some {
     switch destination {
     case .view1:
-        return View1().toAnyView()
+        View1()
     case .view2:
-        return View2().toAnyView()
+        View2()
     ...
     }
 }
 ```
-
-PS: InfiniteNavigation comes with a handy `.toAnyView()` view extension.
 
 3. Create a `Combine.Publisher` that will be used to command the `InfiniteNavContainer`.
 
@@ -121,7 +120,7 @@ InfiniteNavigation.create(
     initialStack: Array<YOUR_VIEW_TYPE>,
     navAction: AnyPublisher<NavAction<YOUR_VIEW_TYPE>>,
     environments: [YOUR_ENVIRONMENT_OBJECTS],
-    viewBuilder: (YOUR_VIEW_TYPE) -> AnyView,
+    viewBuilder: (YOUR_VIEW_TYPE) -> some View,
     homeView: () -> some View
 )
 ```
