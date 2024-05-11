@@ -7,9 +7,9 @@ public struct InfiniteNavigation {
     public static func create<Root: View, Destination: Hashable>(
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
-        environments: any ObservableObject...,
-        viewBuilder: @escaping (Destination) -> AnyView,
-        root: @escaping () -> Root
+        environments: Environment...,
+        viewBuilder: @escaping (Destination) -> some View,
+        @ViewBuilder root: @escaping () -> Root
     ) -> some View {
         create(
             initialStack: initialStack,
@@ -24,9 +24,9 @@ public struct InfiniteNavigation {
     public static func create<Root: View, Destination: Hashable>(
         initialStack: [Destination] = [],
         navAction: AnyPublisher<NavAction<Destination>, Never>,
-        environments: Environments = [],
-        viewBuilder: @escaping (Destination) -> AnyView,
-        root: @escaping () -> Root
+        environments: [Environment] = [],
+        viewBuilder: @escaping (Destination) -> some View,
+        @ViewBuilder root: @escaping () -> Root
     ) -> some View {
         if #available(iOS 16.0, *) {
             InfiniteNavContainer(

@@ -5,27 +5,27 @@ import Combine
 internal struct Sheet: Identifiable {
     let id = UUID().uuidString
     var path = NavigationPath()
-    let source: () -> AnyView
+    let source: () -> any View
 }
 
-public typealias Environments = [any ObservableObject]
+public typealias Environment = any ObservableObject
 
 @available(iOS 16.0, *)
 public struct InfiniteNavContainer<Destination: Hashable, Root: View>: View {
 
     public typealias NavDestinationPublisher = AnyPublisher<NavAction<Destination>, Never>
-    public typealias NavDestinationBuilder = (Destination) -> AnyView
+    public typealias NavDestinationBuilder = (Destination) -> any View
     
     private let navAction: NavDestinationPublisher
     private let viewBuilder: NavDestinationBuilder
-    private let environments: Environments
+    private let environments: [Environment]
     
     @State private var stack: [Sheet]
     
     init(
         initialStack: [Destination] = [],
         navAction: NavDestinationPublisher,
-        environments: Environments = [],
+        environments: [Environment] = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
@@ -83,7 +83,7 @@ extension InfiniteNavContainer {
         .toAnyView()
     }
     
-    private func wrap(_ view: some View) -> some View {
+    private func wrap(_ view: any View) -> some View {
         view
             .apply(environments: environments)
             .navigationBarHidden(true)

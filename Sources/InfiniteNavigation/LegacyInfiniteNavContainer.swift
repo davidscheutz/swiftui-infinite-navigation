@@ -6,7 +6,7 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
     
     public typealias UIViewControllerType = UINavigationController
     public typealias NavDestinationPublisher = AnyPublisher<NavAction<View>, Never>
-    public typealias NavDestinationBuilder = (View) -> AnyView
+    public typealias NavDestinationBuilder = (View) -> any SwiftUI.View
     
     private let coordinator: Coordinator
     private let rootResolver: () -> Root
@@ -17,7 +17,7 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
     internal init(
         initialStack: [View] = [],
         navAction: NavDestinationPublisher,
-        environments: Environments = [],
+        environments: [Environment] = [],
         viewBuilder: @escaping NavDestinationBuilder,
         root: @escaping () -> Root
     ) {
@@ -50,11 +50,11 @@ public struct LegacyInfiniteNavContainer<Root: SwiftUI.View, View>: UIViewContro
         
         var resolver: Resolver?
         
-        private let environments: Environments
+        private let environments: [Environment]
         private let viewBuilder: NavDestinationBuilder
         private var navSubscription: AnyCancellable?
         
-        init(navAction: NavDestinationPublisher, environments: Environments, viewBuilder: @escaping NavDestinationBuilder) {
+        init(navAction: NavDestinationPublisher, environments: [Environment], viewBuilder: @escaping NavDestinationBuilder) {
             self.environments = environments
             self.viewBuilder = viewBuilder
             
